@@ -4,7 +4,15 @@ Repository for training target ID system on AUVSI SUAS targets.
 
 ## Installation
 
-This repository requires tensorflow and tflite. 
+This repository requires tensorflow and tflite. I recommend creating a virtual environment, but you don't necessarily need to.
+
+Just run 
+
+```
+pip install -r requirements.txt
+```
+
+to get the packages needed.
 
 ## Training
 
