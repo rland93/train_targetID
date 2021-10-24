@@ -1,7 +1,9 @@
-import bpy, csv, cv2, colorsys, os, pathlib, random, sys, string, json, argparse, warnings, math
+from networkx.algorithms.shortest_paths.generic import shortest_path_length
+import bpy, csv, cv2, colorsys, os, pathlib, random, sys, string, json, argparse, warnings, math, PIL
 from types import SimpleNamespace
 import numpy as np
 import mathutils
+from pathlib import Path
 from contextlib import redirect_stdout
 from collections import defaultdict
 from datetime import datetime
@@ -110,6 +112,8 @@ class BlenderArgParse(argparse.ArgumentParser):
         return super().parse_args(args=self._get_argv_after_doubledash())
 
 
+TARGET_OBJS_DEFAULT_DIR = Path("./target_objs")
+
 # only consider args after '--', because blender needs its own args
 argv = sys.argv
 argv = argv[argv.index("--") + 1 :]
@@ -129,31 +133,29 @@ parser.add_argument(
 parser.add_argument(
     "--shape_dir",
     type=str,
-    default="./shapes",
-    help="REQUIRED The directory containing shape .obj and .mtl files. A shape's .obj must contain a .mtl with the material parameters of the shape with the same name.",
-    required=True,
+    default=str((TARGET_OBJS_DEFAULT_DIR / "shapes").resolve()) + "/",
+    help="The directory containing shape .obj and .mtl files. A shape's .obj must contain a .mtl with the material parameters of the shape with the same name.",
+    required=False,
 )
 parser.add_argument(
     "--alpha_dir",
     type=str,
-    default="./alphas",
-    help="REQUIRED The directory containing alphanumeric .obj and .mtl files. An alphanumeric's .obj must contain a corresponding .mtl with the same filename.",
-    required=True,
+    default=str((TARGET_OBJS_DEFAULT_DIR / "alphanumerics").resolve()) + "/",
+    help="The directory containing alphanumeric .obj and .mtl files. An alphanumeric's .obj must contain a corresponding .mtl with the same filename.",
+    required=False,
 )
-parser.add_argument(
-    "--n", type=int, help="REQUIRED no. of images", required=True
-)
+parser.add_argument("--n", type=int, help="REQUIRED no. of images", required=True)
 parser.add_argument(
     "--wl",
     type=float,
-    default=.1,
+    default=0.1,
     help="shape minimum width, in meters.",
     required=False,
 )
 parser.add_argument(
     "--wu",
     type=float,
-    default=.9,
+    default=0.9,
     help="shape maximum width, in meters.",
     required=False,
 )
@@ -255,7 +257,7 @@ shape_offsets = defaultdict(
         "Heart": [0, 0, 0],
         "Hexagon": [0, 0, 0],
         "Hexstar": [0, 0, 0],
-        "Moon": [-.7, 0, 0],
+        "Moon": [-0.7, 0, 0],
         "Octagon": [0, 0, 0],
         "Pentagon": [0, 0, 0],
         "Pentstar": [0, 0, 0],
@@ -305,6 +307,7 @@ def gen_trunc_poiss(lam):
         r = np.random.poisson(lam=lam)
         if r != 0:
             return r
+
 
 tic = time.time()
 
@@ -380,9 +383,8 @@ while n < opt.n:
     # number of objects to draw in scene
     n_objs = gen_trunc_poiss(1.8)
     print(n_objs)
-    labrows=[]
+    labrows = []
 
-    
     # so that placed shapes don't clip into one another, we add a very
     # slight vertical offset for every new shape
     new_shape_voffset = 0.0
@@ -401,17 +403,16 @@ while n < opt.n:
 
         # set origin as object origin for letter, shape in scene.
 
-
-        # import shape into scene 
+        # import shape into scene
         with redirect_stdout(None):
             # make new unique identifiers for each shape in scene
             shape_id = uuid.uuid4().hex
             alpha_id = uuid.uuid4().hex
-            bpy.ops.import_scene.obj(filepath = paths.shape)
+            bpy.ops.import_scene.obj(filepath=paths.shape)
             bpy.data.objects[shape_name].name = shape_id
             bpy.data.objects[shape_id].data.name = shape_id
 
-            bpy.ops.import_scene.obj(filepath = paths.alpha)
+            bpy.ops.import_scene.obj(filepath=paths.alpha)
             bpy.data.objects[alpha_name].name = alpha_id
             bpy.data.objects[alpha_id].data.name = alpha_id
 
@@ -424,18 +425,16 @@ while n < opt.n:
         bpy.ops.object.select_all(action="DESELECT")
 
         # shape color
+        shape_h = random.uniform(0.0, 1.0)
+        shape_s = random.uniform(0.9, 1.0)
+        shape_v = random.uniform(0.6, 1.0)
 
-
-        golden_ratio_conjugate = 0.618033988749895
-        color_h = random.uniform(0,1) # use random start value
-        color_h += golden_ratio_conjugate
-        color_h %= 1
-        scolor = color_objects.HSVColor(color_h, random.uniform(0.9,1.0), random.uniform(0.7, 1.0))
-
-        acolor_lab = color_objects.LabColor(random.uniform(50,80), random.uniform(-128,128), random.uniform(-128,128))
-        acolor = color_conversions.convert_color(acolor_lab, color_objects.HSVColor)
-        scolor = scolor.hsv_h, scolor.hsv_s, scolor.hsv_v
-        acolor = acolor.hsv_h, acolor.hsv_s, acolor.hsv_v
+        scolor = color_objects.HSVColor(shape_h, shape_s, shape_v).get_value_tuple()
+        acolor = color_objects.HSVColor(
+            (shape_h + random.uniform(0.2, 0.8)) % 1.0,
+            shape_s - random.uniform(0.0, 0.3),
+            shape_v - random.uniform(0.1, 0.4),
+        ).get_value_tuple()
 
         print(scolor, acolor)
 
@@ -504,7 +503,7 @@ while n < opt.n:
         # 	│  . <cx, cy>      │
         # 	│                  │
         # 	└──────────────────┘
-        cx, cy = random.uniform(0.1, 0.9), random.uniform(0.1, 0.8)
+        cx, cy = random.uniform(0.01, 0.99), random.uniform(0.01, 0.99)
         # vector pointing from camera origin through that <cx, cy> point
         v = (bl + (cx * x + cy * y)) - o
         # point's location where that vector intersects origin xy plane
@@ -532,7 +531,7 @@ while n < opt.n:
         # place shape
         # add very slight random vertical offset to point, so that overlapping shapes
         # do not clip into one another
-        pt += mathutils.Vector([0,0,new_shape_voffset])
+        pt += mathutils.Vector([0, 0, new_shape_voffset])
         new_shape_voffset += 1e-3
         bpy.data.objects[shape_id].location = pt
         bpy.data.objects[alpha_id].location = (
@@ -578,6 +577,7 @@ while n < opt.n:
 
     # background
     bgpath = random.choice(dirs.bg_paths)
+
     bpy.context.scene.render.film_transparent = True
     bpy.context.scene.use_nodes = True
     composite = bpy.context.scene.node_tree.nodes[0]
