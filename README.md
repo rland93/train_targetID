@@ -1,6 +1,8 @@
-# train_targetID
+# UCI's data generator and training pipeline for Target ID (ODCL) system
 
 Repository for training target ID system on AUVSI SUAS targets.
+
+This was developed by Mike Sutherland from 2020-2021 as part of UC Irvine's UAV Forge project, which is attempting to field a vehicle in the 2022 AUVSI competition.
 
 ## Installation
 
