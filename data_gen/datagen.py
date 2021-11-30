@@ -8,6 +8,7 @@ from datetime import datetime
 import uuid
 import time
 from colormath import color_objects, color_conversions
+from matplotlib import cm
 
 # How to use:
 # blender --background --use-extension 1 -E CYCLES -t 0 -P 'dataset_coco_v2.py' -- --dir './dir' ...
@@ -72,6 +73,16 @@ def get_bbox(scene, cam_ob, me_ob):
 def radians(degrees):
     return degrees * np.pi / 180
 
+
+def get_rand_rainbow_colors(n_colors=100):
+    x = np.linspace(0, 1, num=60)
+    colors = cm.get_cmap("gist_rainbow")(x)
+    clist = [(*tuple(c), 1) for c in colors[:, :3]]
+    letter_idx = np.random.choice(len(clist))
+    shape_idx = list(range(len(clist)))[
+        int(letter_idx + random.uniform(n_colors / 3, 2 * n_colors / 3)) % len(clist)
+    ]
+    return clist[shape_idx], clist[letter_idx]
 
 def objcolor():
     # object hsv
@@ -424,30 +435,17 @@ while n < opt.n:
         bpy.ops.object.select_all(action="DESELECT")
 
         # shape color
-
-
-        golden_ratio_conjugate = 0.618033988749895
-        color_h = random.uniform(0,1) # use random start value
-        color_h += golden_ratio_conjugate
-        color_h %= 1
-        scolor = color_objects.HSVColor(color_h, random.uniform(0.9,1.0), random.uniform(0.7, 1.0))
-
-        acolor_lab = color_objects.LabColor(random.uniform(50,80), random.uniform(-128,128), random.uniform(-128,128))
-        acolor = color_conversions.convert_color(acolor_lab, color_objects.HSVColor)
-        scolor = scolor.hsv_h, scolor.hsv_s, scolor.hsv_v
-        acolor = acolor.hsv_h, acolor.hsv_s, acolor.hsv_v
-
-        print(scolor, acolor)
+        scolor, acolor = get_rand_rainbow_colors()
 
         if console:
             print("\tshape is color: {}".format([round(c, 2) for c in scolor]))
             print("\talpha is color: {}".format([round(c, 2) for c in acolor]))
 
         smat = bpy.data.materials.new("object_color")
-        smat.diffuse_color = *colorsys.hsv_to_rgb(*scolor), 1.0
+        smat.diffuse_color = scolor
 
         amat = bpy.data.materials.new("alpha_color")
-        amat.diffuse_color = *colorsys.hsv_to_rgb(*acolor), 1.0
+        amat.diffuse_color = acolor
 
         bpy.data.objects[shape_id].active_material = smat
         bpy.data.objects[alpha_id].active_material = amat
