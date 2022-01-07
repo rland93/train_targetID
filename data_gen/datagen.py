@@ -75,13 +75,13 @@ def radians(degrees):
 
 
 def get_rand_rainbow_colors(n_colors=100):
-    x = np.linspace(0, 1, num=60)
-    colors = cm.get_cmap("gist_rainbow")(x)
+    x = np.linspace(0, 1, num=n_colors)
+    colors = cm.get_cmap("rainbow")(x)
     clist = [(*tuple(c), 1) for c in colors[:, :3]]
+
     letter_idx = np.random.choice(len(clist))
-    shape_idx = list(range(len(clist)))[
-        int(letter_idx + random.uniform(n_colors / 3, 2 * n_colors / 3)) % len(clist)
-    ]
+    shape_idx = (random.randint(len(clist) / 4, 3* len(clist) / 4) + letter_idx) % len(clist) 
+
     return clist[shape_idx], clist[letter_idx]
 
 def objcolor():
@@ -389,7 +389,7 @@ while n < opt.n:
     textfname = dirs.labeldir + "/" + obj_path + ".txt", "w"
 
     # number of objects to draw in scene
-    n_objs = gen_trunc_poiss(1.8)
+    n_objs = gen_trunc_poiss(1.4)
     print(n_objs)
     labrows=[]
 
@@ -531,10 +531,10 @@ while n < opt.n:
         # add very slight random vertical offset to point, so that overlapping shapes
         # do not clip into one another
         pt += mathutils.Vector([0,0,new_shape_voffset])
-        new_shape_voffset += 1e-3
+        new_shape_voffset += 5e-1
         bpy.data.objects[shape_id].location = pt
         bpy.data.objects[alpha_id].location = (
-            pt + mathutils.Vector([0, 0, 5e-4]) + letteroffset
+            pt + mathutils.Vector([0, 0, 5e-2]) + letteroffset
         )
 
         # set shape as parent to letter
